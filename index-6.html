@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bonoloto Predictor & Strategies</title>
+    <style>
+        :root {
+            --bg-primary: #121826;
+            --bg-card: #1f293d;
+            --accent: #00d26a;
+            --accent-hover: #00b359;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.4rem;
+            margin-bottom: 16px;
+            color: var(--accent);
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            margin-top: 0;
+            margin-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 8px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        select, input {
+            width: 100%;
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            color: white;
+            padding: 10px;
+            font-size: 0.95rem;
+            margin-bottom: 12px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            background-color: var(--accent);
+            color: #000;
+            font-weight: bold;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 8px;
+        }
+
+        button.btn-secondary {
+            background-color: #2563eb;
+            color: white;
+        }
+
+        button.btn-secondary:hover {
+            background-color: #1d4ed8;
+        }
+
+        .balls-container {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 12px 0;
+        }
+
+        .ball {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        }
+
+        .ball.hot {
+            background: linear-gradient(135deg, #dc2626, #991b1b);
+        }
+
+        .ball.fixed {
+            background: linear-gradient(135deg, #d97706, #b45309);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 8px;
+        }
+
+        .stats-item span {
+            color: var(--text-main);
+            font-weight: bold;
+        }
+
+        .strategy-desc {
+            font-size: 0.8rem;
+            color: #d1d5db;
+            background: rgba(255,255,255,0.05);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .status-msg {
+            font-size: 0.8rem;
+            text-align: center;
+            margin-top: 6px;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎲 Bonoloto Predictor & Strategies</h1>
+
+    <!-- Descarga automática de sorteo -->
+    <div class="card">
+        <h2>Último Sorteo Detectado</h2>
+        <button class="btn-secondary" onclick="obtenerUltimoSorteo()">🔄 Actualizar Último Sorteo</button>
+        <div id="status-auto" class="status-msg">Sincronizando con Loterías...</div>
+        <div id="ultimo-sorteo-balls" class="balls-container"></div>
+    </div>
+
+    <!-- Generador Multiestratégico -->
+    <div class="card">
+        <h2>Generar Apuesta por Objetivo</h2>
+        
+        <label for="select-estrategia">Elige tu objetivo de aciertos:</label>
+        <select id="select-estrategia" onchange="actualizarDescripcionEstrategia()">
+            <option value="2">2 Números (Fijar 2 Bases Calientes)</option>
+            <option value="3">3 Números (Retorno Recurrente / Cobertura)</option>
+            <option value="4">4 Números (Control Estricto de Decenas)</option>
+            <option value="5" selected>5 Números (Filtro Sumas 115-185 y Parity)</option>
+            <option value="6">6 Números (Especial Bote / Anti-Fechas >31)</option>
+        </select>
+
+        <div id="estrategia-info" class="strategy-desc"></div>
+
+        <button onclick="generarSegunEstrategia()">Generar Apuesta Estratégica</button>
+        <div id="resultado-generador" class="balls-container"></div>
+        <div id="detalles-generador" class="stats-grid"></div>
+    </div>
+
+    <!-- Top 10 Calientes -->
+    <div class="card">
+        <h2>Top 10 Números Más Frecuentes</h2>
+        <div id="top-numeros" class="balls-container"></div>
+    </div>
+</div>
+
+<script>
+    let historico = [
+        [10, 15, 22, 33, 40, 45],
+        [2, 11, 27, 30, 34, 46],
+        [5, 10, 18, 22, 33, 39],
+        [7, 12, 25, 33, 41, 48],
+        [1, 10, 19, 28, 34, 45],
+        [3, 14, 22, 30, 39, 46]
+    ];
+
+    if (localStorage.getItem('bonoloto_historico')) {
+        historico = JSON.parse(localStorage.getItem('bonoloto_historico'));
+    }
+
+    const descripciones = {
+        "2": "Fija los 2 números con mayor frecuencia histórica como bases fijas y completa los otros 4 con filtros estándar.",
+        "3": "Prioriza la diversidad de tríos y mezcla números calientes con frios para maximizar la probabilidad de recuperar la inversión (8 €).",
+        "4": "Exige que la combinación se distribuya en al menos 3 o 4 decenas distintas, evitando acumular más de 2 números por decena.",
+        "5": "Filtro estricto de suma gaussiana (115-185), 2 a 4 números pares y máximo 2 consecutivos para aspirar a premios altos.",
+        "6": "Filtra combinaciones con al menos 3 números mayores de 31 (evita cumpleaños/fechas) y anti-patrones para no compartir el bote."
+    };
+
+    function actualizarDescripcionEstrategia() {
+        const est = document.getElementById('select-estrategia').value;
+        document.getElementById('estrategia-info').innerText = descripciones[est];
+    }
+
+    async function obtenerUltimoSorteo() {
+        const statusEl = document.getElementById('status-auto');
+        statusEl.innerText = 'Conectando con Loterías...';
+        statusEl.style.color = '#9ca3af';
+
+        try {
+            const targetUrl = 'https://www.loteriasyapuestas.es/servicios/fechassorteodos?game_id=BONO';
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+
+            const response = await fetch(proxyUrl);
+            const data = await response.json();
+            const jsonLoterias = JSON.parse(data.contents);
+
+            if (jsonLoterias && jsonLoterias.length > 0) {
+                const ultimo = jsonLoterias[0];
+                const fecha = ultimo.fecha_sorteo;
+                const numeros = ultimo.combinacion.split('-')
+                    .map(n => parseInt(n.trim()))
+                    .filter(n => !isNaN(n) && n >= 1 && n <= 49)
+                    .slice(0, 6)
+                    .sort((a, b) => a - b);
+
+                if (numeros.length === 6) {
+                    mostrarBolas('ultimo-sorteo-balls', numeros, 'ball');
+                    statusEl.innerText = `Sorteo cargado (${fecha})`;
+                    statusEl.style.color = '#00d26a';
+
+                    const existe = historico.some(s => s.join(',') === numeros.join(','));
+                    if (!existe) {
+                        historico.push(numeros);
+                        localStorage.setItem('bonoloto_historico', JSON.stringify(historico));
+                        mostrarTopNumeros();
+                    }
+                    return;
+                }
+            }
+            throw new Error('Error al interpretar datos');
+        } catch (error) {
+            console.error(error);
+            statusEl.innerText = 'No se pudo conectar. Reintenta en unos minutos.';
+            statusEl.style.color = '#f87171';
+        }
+    }
+
+    function obtenerFrecuencias() {
+        const frec = {};
+        for (let i = 1; i <= 49; i++) frec[i] = 0;
+        historico.forEach(sorteo => {
+            sorteo.forEach(num => { if(frec[num] !== undefined) frec[num]++; });
+        });
+        return frec;
+    }
+
+    function obtenerTopCalientes(cantidad = 10) {
+        const frec = obtenerFrecuencias();
+        return Object.keys(frec)
+            .sort((a, b) => frec[b] - frec[a])
+            .slice(0, cantidad)
+            .map(Number);
+    }
+
+    function mostrarTopNumeros() {
+        const top10 = obtenerTopCalientes(10);
+        mostrarBolas('top-numeros', top10, 'ball hot');
+    }
+
+    function mostrarBolas(containerId, numeros, clase, fijos = []) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+        numeros.forEach(num => {
+            const ball = document.createElement('div');
+            ball.className = fijos.includes(num) ? 'ball fixed' : clase;
+            ball.innerText = num;
+            container.appendChild(ball);
+        });
+    }
+
+    // Reglas de validación avanzadas
+    function validarFiltros(comb, objetivo) {
+        const suma = comb.reduce((a, b) => a + b, 0);
+        const pares = comb.filter(n => n % 2 === 0).length;
+
+        // Consecutivos
+        let consecutivos = 0;
+        for (let i = 0; i < comb.length - 1; i++) {
+            if (comb[i + 1] - comb[i] === 1) consecutivos++;
+        }
+        if (consecutivos > 2) return false;
+
+        // Filtro por Decenas
+        const decenas = new Set(comb.map(n => Math.floor(n / 10)));
+        if (objetivo === "4" && decenas.size < 3) return false;
+
+        // Contar elementos por decena (max 2 si objetivo es 4)
+        if (objetivo === "4") {
+            const conteoDecenas = {};
+            comb.forEach(n => {
+                const d = Math.floor(n / 10);
+                conteoDecenas[d] = (conteoDecenas[d] || 0) + 1;
+            });
+            if (Object.values(conteoDecenas).some(c => c > 2)) return false;
+        }
+
+        // Filtro Números > 31 (Objetivo 6)
+        if (objetivo === "6") {
+            const mayores31 = comb.filter(n => n > 31).length;
+            if (mayores31 < 3) return false;
+        }
+
+        // Suma y Paridad (Aplica para 5 y 6, y de forma general)
+        if (suma < 115 || suma > 185) return false;
+        if (pares < 2 || pares > 4) return false;
+
+        return true;
+    }
+
+    function generarSegunEstrategia() {
+        const objetivo = document.getElementById('select-estrategia').value;
+        let comb = [];
+        let fijos = [];
+        let intentos = 0;
+
+        if (objetivo === "2") {
+            // Fijar los 2 números más calientes
+            fijos = obtenerTopCalientes(2);
+        }
+
+        do {
+            const set = new Set(fijos);
+            while (set.size < 6) {
+                set.add(Math.floor(Math.random() * 49) + 1);
+            }
+            comb = Array.from(set).sort((a, b) => a - b);
+            intentos++;
+        } while (!validarFiltros(comb, objetivo) && intentos < 8000);
+
+        mostrarBolas('resultado-generador', comb, 'ball', fijos);
+
+        // Mostrar estadísticas del resultado
+        const suma = comb.reduce((a, b) => a + b, 0);
+        const pares = comb.filter(n => n % 2 === 0).length;
+        const mayores31 = comb.filter(n => n > 31).length;
+        const decenasCount = new Set(comb.map(n => Math.floor(n / 10))).size;
+
+        document.getElementById('detalles-generador').innerHTML = `
+            <div class="stats-item">Suma total: <span>${suma}</span></div>
+            <div class="stats-item">Pares/Impares: <span>${pares}/${6-pares}</span></div>
+            <div class="stats-item">Decenas cubiertas: <span>${decenasCount}</span></div>
+            <div class="stats-item">Mayores de 31: <span>${mayores31}</span></div>
+        `;
+    }
+
+    // Inicializar
+    actualizarDescripcionEstrategia();
+    mostrarTopNumeros();
+    obtenerUltimoSorteo();
+</script>
+</body>
+</html>
